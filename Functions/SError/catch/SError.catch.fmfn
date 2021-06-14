@@ -1,0 +1,74 @@
+/*	SError.catch ( _code )
+	@about checks ScriptResult for exception object, sets local variables, adds current script to stack
+	@author Nils Waldherr <nils.waldherr@fmgarage.com>
+	@copyright ©2009-2021 FMGARAGE
+	@license https://opensource.org/licenses/mit MIT
+	@package f1.system.error
+	@version 1.2.0-100 – 05.10.2007 - Nils Waldherr
+             2.1.0-100 - 07.05.2010 - NW: log-level neu
+	         2.1.1-100 - 11.10.2010 - NW: hiding passwords
+	         2.5.0-100 - 01.02.2011 - NW: re-implementing class concept, removed parameter _typ
+	         3.0.0-101 - 22.03.2012 - NW: renamed, parameters changed, dropped support for _exception, 
+	         3.1.0-102 - 04.07.2012 - NW: removed case "$SError.alreay set"
+	         3.2.0-103 - 08.08.2012 - NW: hiding all parameters beginning with '_'
+	         3.3.0-104 - 31.10.2012 - NW: version mode
+	         4.1.0-105 - 05.05.2014 - NW: moved to local
+	         5.0.0-106 - 25.05.2014 - NW: handles xml and arrays
+	         5.0.1-108 - 26.05.2014 - NW: fix
+	         5.1.0-109 - 08.09.2015 - NW: revision, stacklevel
+	         5.2.0-110 - 31.03.2017 - NW: id, removed <exception>
+	         6.0.0-111 - 06.06.2021 – NW: rewrite with json, moved to SError
+	         
+	
+	@param string _code = "" -- use predefined codes like "UserCancelled" or custom codes ("SomethingWentWrong")
+	@param (string) $test_script_result -- inject script result for testing
+
+	@return BOOL
+	
+	@uses function SError.throw() version 6.0
+		--get-env 
+	
+	
+	@todo add _class ?
+
+*/
+Case(
+
+	/*	return version
+	    ----------------------------------------------------------------------------------
+	*/
+	_code = "--version" OR $_Db.inVersionMode; 6000000;
+
+
+
+	/*	result is exception object
+	    ----------------------------------------------------------------------------------
+	*/
+	ZeichenLinks( result; 10 ) = "{\"SError\":" oder ZeichenLinks( $test_script_result; 10 ) = "{\"SError\":";
+	Let(
+		[
+			// append surrent script to stack array
+			size = ElementeAnzahl( Jsonlistkeys( result; "stack" ));
+			result = Falls( istleer( $test_script_result ); Hole( ScriptParameter ); $test_script_result );
+			$SError.json = Jsonsetelement( 
+				result; 
+				"stack[" & size & "]"; 
+				SError.throw( "--get-env"; ""; "" );	
+				jsonobject 
+			);
+			
+			// set local var for debugging in data viewer
+			$SError.string = SError.throw( "--to-string"; $SError.json; "" );
+			r = SError.throw( "--set-vars"; exception; "" )
+		];
+		wahr
+	);
+		 
+
+	/*	FileMaker error
+	    ----------------------------------------------------------------------------------
+	*/
+	Hole(LetzteFehlerNr);
+	SError.throw( ""; ""; "" );
+)
+
