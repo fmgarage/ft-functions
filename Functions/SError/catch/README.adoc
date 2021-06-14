@@ -1,5 +1,6 @@
 ---
-:class: SError
-:function: catch
+class: SError
+function: catch
 ---
+
 = {class}.{function}
