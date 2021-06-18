@@ -1,0 +1,137 @@
+/*	SCoreJson.findKey( _json; _name; _scalar_only )
+	@about returns a list of paths to elements with key _name
+	@author Nils <nils.waldherr@fmgarage.com>
+	@copyright ©2021 FMGARAGE
+	@license https://opensource.org/licenses/mit MIT
+	@version 1.0.0-100 - 18.06.2021 – NW
+        
+	@param string _json object or array
+	       string _name keyname using * wildcard
+	       bool _scalar_only do not list objects and arrays
+	       
+	@return list json paths
+*/
+Case(
+
+	/*	iterate
+	    ----------------------------------------------------------------------------------
+	    using _name as path
+	*/
+	_json = "--iterate";
+	While(
+		[
+			// list keys in path
+			keys = JSONListKeys( $SCoreJson.findKey.json; _name );
+			
+			// is array
+			is_array = GetValue( keys; 1 ) = "0";
+			
+			// count elements
+			count = ValueCount( keys );
+			
+			// init result, i
+			result = "";
+			i=1
+		];
+		i <= count;
+		[
+			// set key/index
+			key = GetValue( keys; i );
+			key = Case( is_array; "[" & key & "]"; key );
+			
+			// add key to path
+			path = Substitute( List( _name; key ); ¶; Case( not is_array; "." ));
+			
+			// set is_scalar
+			value = Left( JSONGetElement( $SCoreJson.findKey.json; path ); 1 );
+			is_object_or_array = value = "[" or value = "{";
+			
+			// add path to result, if...
+			result = List( 
+				result;
+				
+				Case(
+					// skip if array
+					is_array; "";
+					
+					// skip if value is object or array
+					_scalar_only and is_object_or_array; "";
+					
+					// exact match
+					not $SCoreJson.findKey.wildcard and key = $SCoreJson.findKey.name; 
+					path;
+
+					// key matches *name*
+					$SCoreJson.findKey.wildcard_l and $SCoreJson.findKey.wildcard_r
+					and Position( key; $SCoreJson.findKey.name; 1; 1 ); path;
+					
+					// kay matches name*
+					$SCoreJson.findKey.wildcard_r
+					and Left( key; Length( $SCoreJson.findKey.name )) = $SCoreJson.findKey.name;
+					path;
+				
+					// kay matches *name
+					$SCoreJson.findKey.wildcard_l
+					and Right( key; Length( $SCoreJson.findKey.name )) = $SCoreJson.findKey.name;
+					path										
+				);
+				
+				// go into object or array
+				Case( is_object_or_array; SCoreJson.findKey( "--iterate"; path; _scalar_only ))
+			);
+			i = i+1
+		];
+		result
+	);
+
+
+	/*	preconditions
+	    ----------------------------------------------------------------------------------
+	*/
+	
+	// return version
+	_json = "--version" or $_Db.inVersionMode; 1000000;
+	
+	// empty _json
+	IsEmpty( _json ); "ERROR: parameter _json must not be empty";
+	
+	// empty _name
+	IsEmpty( _name ); "ERROR: parameter _name must not be empty";
+
+
+
+	/*	init
+	    ----------------------------------------------------------------------------------
+	*/
+	Let(
+		// initialize vars
+		[
+//			$SCoreJson.findKey.debug.ms = Get( CurrentTimeUTCMilliseconds );
+			$SCoreJson.findKey.json = _json;
+			$SCoreJson.findKey.wildcard_l = Left( _name; 1 ) = "*";
+			$SCoreJson.findKey.wildcard_r = Right( _name; 1 ) = "*";
+			$SCoreJson.findKey.wildcard = $SCoreJson.findKey.wildcard_l or $SCoreJson.findKey.wildcard_r;
+			$SCoreJson.findKey.name = Middle( 
+				_name; 
+				1+$SCoreJson.findKey.wildcard_l;
+				Length( _name )-$SCoreJson.findKey.wildcard_l-$SCoreJson.findKey.wildcard_r
+			)
+		];
+		
+		// call main
+		SCoreJson.findKey( "--iterate"; ""; _scalar_only )
+		
+		// reset vars
+		& Let(
+			[
+// 				$SCoreJson.findKey.debug.ms = Get( CurrentTimeUTCMilliseconds ) - $SCoreJson.findKey.debug.ms;
+				$SCoreJson.findKey.json = "";
+				$SCoreJson.findKey.name = "";
+				$SCoreJson.findKey.wildcard = "";
+				$SCoreJson.findKey.wildcard_l = "";
+				$SCoreJson.findKey.wildcard_r = ""
+			];
+			""
+		)
+	)			
+)
