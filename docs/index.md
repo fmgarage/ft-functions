@@ -3,9 +3,9 @@ title: Home
 nav_order: 1
 ---
 
-## Welcome to FT Custom Functions
+## Welcome to FT Functions
 
-FT Custom Functions is a growing collection of the best FileMaker Custom Functions we use in our daily business.
+**FT Functions** is a growing collection of the best FileMaker Custom Functions we use in our daily business. 
 
 
 
