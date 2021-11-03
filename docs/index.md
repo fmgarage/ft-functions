@@ -22,3 +22,4 @@ nav_order: 1
 ### Support or Contact
 
 Having trouble with implementing FX_Reports? Not sure, if FX_Reports matches your individual requirements? We are happy to assist, just contact us via our website, Twitter ([@fmgarage](https://twitter.com/fmgarage)) or email (support@fmgarage.com). 
+

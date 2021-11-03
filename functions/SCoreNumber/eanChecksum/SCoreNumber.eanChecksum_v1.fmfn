@@ -1,5 +1,6 @@
 /*	SCoreNumber.eanChecksum( _ean )
 	@about generates or validates the ean13 checksum
+	@description: 12- or 13-digit EAN.
 	@author Nils <nils.waldherr@fmgarage.com>
 	@copyright ©2010-2021 Filemakergarage
 	@version 1.0.0-100 - 15.09.2010
