@@ -1,0 +1,77 @@
+/*	SCoreNumber.eanChecksum( _ean )
+	@about generates or validates the ean13 checksum
+	@author Nils <nils.waldherr@fmgarage.com>
+	@copyright ©2010-2021 Filemakergarage
+	@version 1.0.0-100 - 15.09.2010
+	         1.0.1-101 - 21.04.2015 - NW: moved to local
+	         1.0.2-102 - 23.01.2020 – NW: moved to SCoreNumber
+	         1.0.3-103 - 12.06.2021 – NW: version mode
+	         
+	@param string _ean - 12 or 13 digit code
+	@return string 13 digit ean if valid, empty string on error or mismatch
+
+	@info http://de.wikipedia.org/wiki/European_ArticleSCoreNumber
+	
+	@test only 11 digits
+		SCoreNumber.eanChecksum( "12345678901" ) => ""
+	@test 12 digits, generates the chechsum 8
+		SCoreNumber.eanChecksum( "123456789012" ) => "1234567890128"
+	@test 13 digits with correct checksum
+		SCoreNumber.eanChecksum( "1234567890128" ) => "1234567890128"
+	@test 13 digits with incorrect checksum
+		SCoreNumber.eanChecksum( "1234567890123" ) => ""
+	@test 14 digits 
+		SCoreNumber.eanChecksum( "12345678901234" ) => ""
+*/
+Case(
+
+	/*	preconditions
+	    ----------------------------------------------------------------------------------
+	*/
+	
+	// return version
+	_ean = "--version" or $_Db.inVersionMode; 1000003;
+	
+	// check length
+	Length( _ean ) < 12 or Length( _ean ) > 13;
+	"ERROR: expecting 12 or 13 digits as input";
+	
+	// check numbers only
+	_ean <> Filter ( _ean ; "1234567890" );
+	"ERROR: expecting only numbers as input";
+	
+	
+	
+	/*	main
+	    ----------------------------------------------------------------------------------
+	*/
+	Let(
+		[
+			ean12 = Left( _ean; 12 );
+			cs = Middle( _ean; 1; 1 )
+				+ Middle( _ean; 3; 1 )
+				+ Middle( _ean; 5; 1 )
+				+ Middle( _ean; 7; 1 )
+				+ Middle( _ean; 9; 1 )
+				+ Middle( _ean; 11; 1 );
+			cs = cs + 3*( Middle( _ean; 2; 1 )
+				+ Middle( _ean; 4; 1 )
+				+ Middle( _ean; 6; 1 )
+				+ Middle( _ean; 8; 1 )
+				+ Middle( _ean; 10; 1 )
+				+ Middle( _ean; 12; 1 )
+			);
+			cs = Mod( cs*-1 ; 10 )
+		];
+		Case(
+			// generate checksum
+			Length( _ean ) = 12; ean12 & cs;
+		
+			// validate checksum
+			Length( _ean ) = 13 and Right( _ean; 1 ) = cs; _ean;
+			
+			// checksum mismatch
+			"ERROR: checksum should be " & cs
+		)
+	)
+)
