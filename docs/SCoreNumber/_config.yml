@@ -1,0 +1,9 @@
+# https://github.com/pmarsceill/just-the-docs
+remote_theme: pmarsceill/just-the-docs
+
+logo: "/assets/images/logo.png"
+
+# Aux links for the upper right navigation
+aux_links:
+  "FMGARAGE Homepage":
+    - "//fmgarage.com"
