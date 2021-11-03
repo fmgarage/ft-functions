@@ -1,0 +1,171 @@
+/*	SCoreNumber.baseConvert( _value; _from; _to )
+	@about coverts between different bases, e.g. base10 (decimal) to base2 (binary)
+	@author Nils Waldherr <nils.waldherr@fmgarage.com>
+	@copyright ©2020 FMGARAGE
+	@license https://opensource.org/licenses/mit MIT
+	@version 1.0.0-101 - 12.06.2021 – NW: 
+	@package f1.system.core.number
+	@param string _value
+	       int _from -- 2..
+	            2 binary
+	           10 decimal
+	           16 hex
+	           32 base32
+	           64 base64
+	           84 encodes utf8 with internal code() function
+	           85 base85
+	           all other values use the [9-9][a-z] pool (max 36)
+	       int _to
+	           84 decodes to utf8 with internal char() function
+	           
+	           
+	@return string|int value | string "ERROR: ..."
+	
+*/
+Case(
+
+	/*	preconditions
+	    ----------------------------------------------------------------------------------
+	*/
+
+	// return version
+	_value = "--version" or $_Db.inVersionMode; 1000000;
+	
+	// FM version
+	GetValue( Substitute( RightWords( Get( ApplicationVersion ); 1 ); "."; ¶ ); 1 )+0 < 18;
+	"ERROR: FileMaker 18 required (while)";
+	
+	// empty _value
+	IsEmpty( _value ); "ERROR: parameter _value must not be empty";
+	
+	// empty _from
+	IsEmpty( _from ); "ERROR: parameter _from must not be empty";
+	
+	// _from unknown
+	_from+0 < 2 or ( _from+0 > 36 and _from+0 ≠ 64 and _from+0 ≠ 84 and _from+0 ≠ 85 ); 
+	"ERROR: parameter _from = " & _from & " could not be resolved";
+	
+	// empty _to
+	IsEmpty( _to ); "ERROR: parameter _to must not be empty";
+	
+	// _to < 2, > 36
+	_to+0 < 2 or ( _to+0 > 36 and _to+0 ≠ 64 and _to+0 ≠ 84 and _to+0 ≠ 85 ); 
+	"ERROR: parameter _to = " & _to & " could not be resolved";
+	
+	// no conversion
+	_from = _to; _value;
+
+
+
+	/*	main
+	    ----------------------------------------------------------------------------------
+	*/
+	Let(
+		[
+			_from = _from+0;
+			_to = _to+0;
+			decimal = Case(
+			
+				// input is decimal
+				_from = 10; _value+0;
+				
+				// input is utf8
+				_from = 84; Code( _value );
+				
+				// else convert
+				While(
+					[
+						// set the right pool for input base
+						pool = Case(
+							_from = 32; "abcdefghijklmnopqrstuvwxyz234567";
+							_from = 64; "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+							_from = 85; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
+							Left( "0123456789abcdefghijklmnopqrstuvwxyz"; _from )
+						);
+						l = Length( _value );
+						decimal = 0;
+						error = "";
+						i = 0
+					];
+					// i++ until length, exit on error
+					i < l and IsEmpty( error );
+					[
+						// get digit from input - rtl
+						digit = Middle( _value; l-i; 1 ); 
+						
+						// determin the value by position in pool
+						pos = Position( pool; digit; 1; 1 ) 
+						
+							// offset by 26 for lower case
+							+ Case(( 
+								_from = 85 or _from = 64 ) 
+								and not IsEmpty( Filter( "abcdefghijklmnopqrstuvwxyz"; digit )); 
+								26 
+							);
+
+						// add value to the result
+						decimal = decimal + ((pos-1) * Max( 1; _from ^ i )); 
+						i = i+1
+					];
+					// return
+					Case(
+						// if digit not in pool return error
+						pos = 0; "ERROR: digit '" & digit & "' not in pool";
+						
+						// resulting value
+						decimal
+					)
+				)
+			)
+		];
+		
+		// generate target format
+		Case(
+			// error
+			Left( decimal; 5 ) = "ERROR"; 
+			decimal;
+			
+			// output is decimal
+			_to = 10; decimal;
+			
+			// output is utf8
+			_to = 84; Char( decimal );
+			
+			// else convert
+			While(
+				[
+					// declare result
+					result = "";
+					
+					// copy decimal into the scope
+					decimal = decimal;
+					
+					// set pool for output base
+					pool = Case(
+						_to = 32; "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+						_to = 64; "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+						_to = 85; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
+						Left( "0123456789abcdefghijklmnopqrstuvwxyz"; _to )
+					)
+				];
+				// iterate as long as decimal has a value, at least once
+				decimal > 0 or IsEmpty( result );
+				[
+					// set value for the current digit - rtl
+					rest = Mod( decimal; _to );
+					
+					// get the according digit from pool
+					digit = Middle( pool; rest+1; 1 ); 
+					
+					// add to result string
+					result = digit & result; 
+					
+					// transfer to next digit
+					decimal = Int( decimal / _to ) 
+				];
+				// return resulting string
+				result
+			)
+		)	
+	)
+)
