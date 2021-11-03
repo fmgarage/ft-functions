@@ -8,6 +8,10 @@ nav_order: 41313458195755913
 
 
 
+Source: https://github.com/fmgarage/ft-functions/tree/main/functions/SCoreNumber/baseConvert
+
+
+
 ### Parameters
 
 

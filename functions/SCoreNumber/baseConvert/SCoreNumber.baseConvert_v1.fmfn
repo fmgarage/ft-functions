@@ -5,6 +5,8 @@
 	@license https://opensource.org/licenses/mit MIT
 	@version 1.0.0-101 - 12.06.2021 – NW: 
 	@package f1.system.core.number
+	@link https://github.com/fmgarage/ft-functions/tree/main/functions/SCoreNumber/baseConvert
+	@doc https://fmgarage.github.io/ft-functions/SCoreNumber/baseConvert.html
 	@param string _value
 	       int _from -- 2..
 	            2 binary
