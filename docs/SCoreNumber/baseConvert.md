@@ -4,7 +4,7 @@ parent: SCoreNumber
 nav_order: 41313458195755913
 ---
 
-## Function: SCoreNumber.baseConvert()
+## <img src="../assets/images/F.png" alt="Function" style="height:30px;"/> SCoreNumber.baseConvert()
 
 
 
@@ -13,3 +13,4 @@ nav_order: 41313458195755913
 
 
 ### Result
+
