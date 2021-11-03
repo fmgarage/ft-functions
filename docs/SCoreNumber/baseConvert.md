@@ -1,7 +1,7 @@
 ---
 title: baseConvert()
 parent: SCoreNumber
-nav_order: 2879472498443963
+nav_order: 41313458195755913
 ---
 
 ## Function: SCoreNumber.baseConvert()
