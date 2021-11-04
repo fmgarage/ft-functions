@@ -3,7 +3,7 @@ title: display()
 parent: SError
 ---
 
-## <img src="../assets/images/f.svg" alt="Function" style="height:20px;margin-bottom:0px;"/> SCoreNumber.baseConvert()
+## <img src="../assets/images/f.svg" alt="Function" style="height:20px;margin-bottom:0px;"/> SError.display()
 
 
 
