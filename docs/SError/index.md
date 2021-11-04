@@ -5,5 +5,5 @@ has_children: true
 
 ## Class SError
 
-see [FT Exceptions](https://github.com/fmgarage/ft-exeptions)
+see [FT Exceptions](https://github.com/fmgarage/ft-exceptions)
 
