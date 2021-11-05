@@ -1,4 +1,4 @@
-/*	SError.catch ( _code )
+/*	SError.catch_v7 ( _code )
 	@about checks ScriptResult for exception object, sets local variables, adds current script to stack
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2009-2021 FMGARAGE
@@ -18,16 +18,22 @@
 	         5.1.0-109 - 08.09.2015 - NW: revision, stacklevel
 	         5.2.0-110 - 31.03.2017 - NW: id, removed <exception>
 	         6.0.0-111 - 06.06.2021 – NW: rewrite with json, moved to SError
+	         6.0.1-112 - 12.10.2021 – NW: fix $SError
+	         7.0.0-114 - 04.11.2021 – NW: remove throw() dependency, --generate, --get-env, --get-message, ...
 	         
 	
 	@param string _code = "" -- use predefined codes like "UserCancelled" or custom codes ("SomethingWentWrong")
 	@param (string) $test_script_result -- inject script result for testing
+	@param (string) $test_script_parameter -- inject script parameter for testing
+	@param (int) $test_fmerror_code
 
 	@return BOOL
+	        (string) $SFmScript.result -- {"SError": ... }
+	        (string) $SError -- {"SError": ... }
+	        (string) $SError.string 
 	
-	@uses function SError.throw() version 6.0
-		--get-env 
-	
+
+	@test SError.catch_v7( _code )
 	
 	@todo add _class ?
 
@@ -37,38 +43,364 @@ Case(
 	/*	return version
 	    ----------------------------------------------------------------------------------
 	*/
-	_code = "--version" OR $_Db.inVersionMode; 6000000;
+	_code = "--version" or $_Db.inVersionMode; 7000000;
 
 
 
-	/*	result is exception object
+	/*	commands
+		--------------------------------------------------------------------------------
+	*/
+	Left( _code; 2 ) = "--";	
+	Case(
+
+
+		/*	--generate
+			------------------------------------------------------------------------------
+			@param (int) $test_fmerror_code -- inject FileMaker error
+			@since 04.11.2021 – NW: moved from throw()
+			@param (int) $test_fmerror_code -- inject FileMaker error
+
+		*/
+		Left( _code; 10 ) = "--generate";
+		Let(
+			[
+				// check for FileMaker error
+				fmerror = Case(
+					not IsEmpty( $test_fmerror_code ); $test_fmerror_code;
+					Get(LastError)
+				);
+			
+				// set code from param
+				code = GetValue( _code; 3 );
+				
+				// set class
+				class = GetValue( _code; 2 );
+				class = Case(
+
+					// from param
+					not IsEmpty( class ); class;
+
+					// FileMaker automatically
+					GetAsBoolean( fmerror ) and IsEmpty( code ); "FileMaker" ;
+				
+					// default
+					"F1"
+				);
+			
+				// set code
+				code = Case (
+			
+					// from param
+					not IsEmpty( code ); code;
+				
+					// from FileMaker
+					GetAsBoolean( fmerror ); fmerror;
+				
+					// generic
+					"Error"
+				);
+			
+				// get message for error code
+				c = code;
+				message_start = Position( _code; ¶; 1; 3 );
+				message = Case( message_start; Right( _code; Length( _code )-message_start));
+				message = Case(
+					
+					// fmerrror
+					class = "FileMaker";
+					Case(c=-1;"Unknown error";c=1;"User canceled action";c=2;"Memory error";c=3;"Command is unavailable (for example, wrong operating system, wrong mode, etc.)";c=4;"Command is unknown";c=5;"Command is invalid (for example, a Set Field script step does not have a calculation specified)";c=6;"File is read-only";c=7;"Running out of memory";c=8;"Empty result";c=9;"Insufficient privileges";c=10;"Requested data is missing";c=11;"Name is not valid";c=12;"Name already exists";c=13;"File or object is in use";c=14;"Out of range";c=15;"Can't divide by zero";c=16;"Operation failed, request retry (for example, a user query)";c=17;"Attempt to convert foreign character set to UTF-16 failed";c=18;"Client must provide account information to proceed";c=19;"String contains characters other than A-Z, a-z, 0-9 (ASCII)";c=20;"Command/operation canceled by triggered script";c=21;"Request not supported (for example, when creating a hard link on a file system that does not support hard links)";c=100;"File is missing";c=101;"Record is missing";c=102;"Field is missing";c=103;"Relationship is missing";c=104;"Script is missing";c=105;"Layout is missing";c=106;"Table is missing";c=107;"Index is missing";c=108;"Value list is missing";c=109;"Privilege set is missing";c=110;"Related tables are missing";c=111;"Field repetition is invalid";c=112;"Window is missing";c=113;"Function is missing";c=114;"File reference is missing";c=115;"Menu set is missing";c=116;"Layout object is missing";c=117;"Data source is missing";c=118;"Theme is missing";c=130;"Files are damaged or missing and must be reinstalled";c=131;"Language pack files are missing (such as Starter Solutions)";c=200;"Record access is denied";c=201;"Field cannot be modified";c=202;"Field access is denied";c=203;"No records in file to print, or password doesn't allow print access";c=204;"No access to field(s) in sort order";c=205;"User does not have access privileges to create new records; import will overwrite existing data";c=206;"User does not have password change privileges, or file is not modifiable";c=207;"User does not have sufficient privileges to change database schema, or file is not modifiable";c=208;"Password does not contain enough characters";c=209;"New password must be different from existing one";c=210;"User account is inactive";c=211;"Password has expired";c=212;"Invalid user account and/or password; please try again";c=213;"User account and/or password does not exist";c=214;"Too many login attempts";c=215;"Administrator privileges cannot be duplicated";c=216;"Guest account cannot be duplicated";c=217;"User does not have sufficient privileges to modify administrator account";c=218;"Password and verify password do not match";c=300;"File is locked or in use";c=301;"Record is in use by another user";c=302;"Table is in use by another user";c=303;"Database schema is in use by another user";c=304;"Layout is in use by another user";c=306;"Record modification ID does not match";c=307;"Transaction could not be locked because of a communication error with the host";c=308;"Theme is locked and in use by another user";c=400;"Find criteria are empty";c=401;"No records match the request";c=402;"Selected field is not a match field for a lookup";c=403;"Exceeding maximum record limit for trial version of FileMaker Pro";c=404;"Sort order is invalid";c=405;"Number of records specified exceeds number of records that can be omitted";c=406;"Replace/Reserialize criteria are invalid";c=407;"One or both match fields are missing (invalid relationship)";c=408;"Specified field has inappropriate data type for this operation";c=409;"Import order is invalid";c=410;"Export order is invalid";c=412;"Wrong version of FileMaker Pro used to recover file";c=413;"Specified field has inappropriate field type";c=414;"Layout cannot display the result";c=415;"One or more required related records are not available";c=416;"A primary key is required from the data source table";c=417;"Database is not a supported data source";c=418;"Internal failure in INSERT operation into a field";c=500;"Date value does not meet validation entry options";c=501;"Time value does not meet validation entry options";c=502;"Number value does not meet validation entry options";c=503;"Value in field is not within the range specified in validation entry options";c=504;"Value in field is not unique as required in validation entry options";c=505;"Value in field is not an existing value in the database file as required in validation entry options";c=506;"Value in field is not listed on the value list specified in validation entry option";c=507;"Value in field failed calculation test of validation entry option";c=508;"Invalid value entered in Find mode";c=509;"Field requires a valid value";c=510;"Related value is empty or unavailable";c=511;"Value in field exceeds maximum field size";c=512;"Record was already modified by another user";c=513;"No validation was specified but data cannot fit into the field";c=600;"Print error has occurred";c=601;"Combined header and footer exceed one page";c=602;"Body doesn't fit on a page for current column setup";c=603;"Print connection lost";c=700;"File is of the wrong file type for import";c=706;"EPSF file has no preview image";c=707;"Graphic translator cannot be found";c=708;"Can't import the file or need color monitor support to import file";c=709;"QuickTime movie import failed";c=710;"Unable to update QuickTime reference because the database file is read-only";c=711;"Import translator cannot be found";c=714;"Password privileges do not allow the operation";c=715;"Specified Excel worksheet or named range is missing";c=716;"A SQL query using DELETE, INSERT, or UPDATE is not allowed for ODBC import";c=717;"There is not enough XML/XSL information to proceed with the import or export";c=718;"Error in parsing XML file (from Xerces)";c=719;"Error in transforming XML using XSL (from Xalan)";c=720;"Error when exporting; intended format does not support repeating fields";c=721;"Unknown error occurred in the parser or the transformer";c=722;"Cannot import data into a file that has no fields";c=723;"You do not have permission to add records to or modify records in the target table";c=724;"You do not have permission to add records to the target table";c=725;"You do not have permission to modify records in the target table";c=726;"There are more records in the import file than in the target table; not all records were imported";c=727;"There are more records in the target table than in the import file; not all records were updated";c=729;"Errors occurred during import; records could not be imported";c=730;"Unsupported Excel version (convert file to Excel 2007/2008 format or a later supported version and try again)";c=731;"File you are importing from contains no data";c=732;"This file cannot be inserted because it contains other files";c=733;"A table cannot be imported into itself";c=734;"This file type cannot be displayed as a picture";c=735;"This file type cannot be displayed as a picture; it will be inserted and displayed as a file";c=736;"Too much data to export to this format; it will be truncated";c=737;"Bento table you are importing is missing";c=738;"The theme you are importing already exists";c=800;"Unable to create file on disk";c=801;"Unable to create temporary file on System disk";c=802;"Unable to open file. (Invalid database name, File is closed in FileMaker Server, Invalid permission)";c=803;"File is single user or host cannot be found";c=804;"File cannot be opened as read-only in its current state";c=805;"File is damaged; use Recover command";c=806;"File cannot be opened with this version of FileMaker Pro";c=807;"File is not a FileMaker Pro file or is severely damaged";c=808;"Cannot open file because access privileges are damaged";c=809;"Disk/volume is full";c=810;"Disk/volume is locked";c=811;"Temporary file cannot be opened as FileMaker Pro file";c=812;"Exceeded host’s capacity";c=813;"Record Synchronization error on network";c=814;"File(s) cannot be opened because maximum number is open";c=815;"Couldn't open lookup file";c=816;"Unable to convert file";c=817;"Unable to open file because it does not belong to this solution";c=819;"Cannot save a local copy of a remote file";c=820;"File is in the process of being closed";c=821;"Host forced a disconnect";c=822;"FMI files not found; reinstall missing files";c=823;"Cannot set file to single-user, guests are connected";c=824;"File is damaged or not a FileMaker file";c=825;"File is not authorized to reference the protected file";c=826;"File path specified is not a valid file path";c=850;"Path is not valid for the operating system";c=851;"Cannot delete an external file from disk";c=852;"Cannot write a file to the external storage";c=853;"One or more containers failed to transfer";c=900;"General spelling engine error";c=901;"Main spelling dictionary not installed";c=902;"Could not launch the Help system";c=903;"Command cannot be used in a shared file";c=905;"No active field selected; command can only be used if there is an active field";c=906;"Current file is not shared; command can be used only if the file is shared";c=920;"Can’t initialize the spelling engine";c=921;"User dictionary cannot be loaded for editing";c=922;"User dictionary cannot be found";c=923;"User dictionary is read-only";c=951;"An unexpected error occurred (*)";c=954;"Unsupported XML grammar (*)";c=955;"No database name (*)";c=956;"Maximum number of database sessions exceeded (*)";c=957;"Conflicting commands (*)";c=958;"Parameter missing (*)";c=959;"Custom Web Publishing technology is disabled";c=960;"Parameter is invalid";c=1200;"Generic calculation error";c=1201;"Too few parameters in the function";c=1202;"Too many parameters in the function";c=1203;"Unexpected end of calculation";c=1204;"Number, text constant, field name or \"(\" expected";c=1205;"Comment is not terminated with \"*/\"";c=1206;"Text constant must end with a quotation mark";c=1207;"Unbalanced parenthesis";c=1208;"Operator missing, function not found or \"(\" not expected";c=1209;"Name (such as field name or layout name) is missing";c=1210;"Plug-in function has already been registered";c=1211;"List usage is not allowed in this function";c=1212;"An operator (for example, +, -, *) is expected here";c=1213;"This variable has already been defined in the Let function";c=1214;"AVERAGE, COUNT, EXTEND, GETREPETITION, MAX, MIN, NPV, STDEV, SUM and GETSUMMARY: expression found where a field alone is needed";c=1215;"This parameter is an invalid Get function parameter";c=1216;"Only Summary fields allowed as first argument in GETSUMMARY";c=1217;"Break field is invalid";c=1218;"Cannot evaluate the number";c=1219;"A field cannot be used in its own formula";c=1220;"Field type must be normal or calculated";c=1221;"Data type must be number, date, time, or timestamp";c=1222;"Calculation cannot be stored";c=1223;"Function referred to is not yet implemented";c=1224;"Function referred to does not exist";c=1225;"Function referred to is not supported in this context";c=1300;"The specified name can’t be used";c=1301;"One of the parameters of the function being imported or pasted has the same name as a function already in the file";c=1400;"ODBC client driver initialization failed; make sure the ODBC client drivers are properly installed";c=1401;"Failed to allocate environment (ODBC)";c=1402;"Failed to free environment (ODBC)";c=1403;"Failed to disconnect (ODBC)";c=1404;"Failed to allocate connection (ODBC)";c=1405;"Failed to free connection (ODBC)";c=1406;"Failed check for SQL API (ODBC)";c=1407;"Failed to allocate statement (ODBC)";c=1408;"Extended error (ODBC)";c=1409;"Error (ODBC)";c=1413;"Failed communication link (ODBC)";c=1414;"SQL statement is too long";c=1450;"Action requires PHP privilege extension (*)";c=1451;"Action requires that current file be remote";c=1501;"SMTP authentication failed";c=1502;"Connection refused by SMTP server";c=1503;"Error with SSL";c=1504;"SMTP server requires the connection to be encrypted";c=1505;"Specified authentication is not supported by SMTP server";c=1506;"Email message(s) could not be sent successfully";c=1507;"Unable to log in to the SMTP server";c=1550;"Cannot load the plug-in or the plug-in is not a valid plug-in";c=1551;"Cannot install the plug-in. Cannot delete an existing plug-in or cannot write to the folder or disk";c=1626;"Protocol is not supported";c=1627;"Authentication failed";c=1628;"There was an error with SSL";c=1629;"Connection timed out; the timeout value is 60 seconds";c=1630;"URL format is incorrect";c=1631;"Connection failed";c)
+					& Case( not IsEmpty( message ); " (" & message & ")" );
+					
+					// else from param
+					message
+				)
+			];
+
+			// return exception object result
+			JSONSetElement( "";
+				[ "SError.class"; class; JSONString ];
+				[ "SError.code"; code; JSONString ];
+				[ "SError.message"; message; JSONString ];			
+				[ "SError.window"; Get( WindowName ); JSONString ];
+				[ "SError.scriptPrivileges"; Get( CurrentPrivilegeSetName ); JSONString ];
+				[ "SError.table"; Get( LayoutTableName ); JSONString ];
+				[ "SError.layout"; Get( LayoutName ); JSONString ];
+				[ "SError.layoutPrivileges"; Get( LayoutAccess ); JSONString ];
+				[ "SError.timestamp"; Get( CurrentHostTimestamp ); JSONString ];
+				[ "SError.utc"; Get( CurrentTimeUTCMilliseconds ); JSONString ];
+				[ "SError.account"; Get( AccountName ); JSONString ];
+				[ "SError.accountPrivileges"; Get( AccountPrivilegeSetName ); JSONString ];
+				[ "SError.stack[0]"; SError.catch_v7( "--get-env" ); JSONObject ]
+			)
+		);
+	
+
+		/*	get environment
+			------------------------------------------------------------------------------
+			@about will be added for every step in the call stack
+				   also used by catch() to append to the stack
+			@param (string) $test_script_parameter
+			@since 28.10.2021 – NW: moved from throw() to catch()
+		*/
+		_code = "--get-env";
+		Let(
+			[
+				// get script parameter
+				parameters = Case(
+					not IsEmpty( $test_script_parameter ); $test_script_parameter;
+					Get( ScriptParameter )
+				);
+				parameters_are_json = Left( JSONListKeys( parameters; "" ); 1 ) <> "?";
+				parameters = Case(
+					parameters_are_json;
+					SError.catch_v7( "--filter-parameter" & parameters )
+				)
+			];
+				
+			JSONSetElement( "";
+				[ "file"; Get( FileName ); JSONString ];
+				[ "script"; Get( ScriptName ); JSONString ];
+				[ "scriptID"; Let(
+					[
+						n = ScriptNames("");
+						p = Position( ¶ & n & ¶; ¶ & Get( ScriptName ) & ¶; 1; 1 )
+					];
+					Case( p; GetValue( ScriptIDs(""); PatternCount( Left(n;p); ¶ )+1 ))
+					); 
+					JSONNumber 
+				];
+				[ "parameter"; parameters; Case( parameters_are_json; JSONObject; JSONString ) ];
+				[ "device"; Get( PersistentID ); JSONString ];
+				[ "server"; Position( Get ( ApplicationVersion ); "Server"; 1; 1); JSONBoolean ]
+			)
+		);
+
+		
+		/*	filter parameter
+			------------------------------------------------------------------------------
+			@about resolve class:code to message
+			@param string _code as parameter
+			@return string filtered parameter
+		*/
+		Left( _code; 18 ) = "--filter-parameter";
+		Let(
+			params = Right( _code; Length(_code)-18);
+			Case(
+		
+				// params are json object
+				Middle( _code; 19; 2 ) = "{\"";
+
+				// filter params with '_'
+				Let(
+					[
+// 						params = ZeichenRechts( _code; Länge(_code-18));
+						filtered_names = While(
+							[
+								names = JSONListKeys( params; "" );
+								filtered_names = "";
+								i = ValueCount( names )
+							];
+							i > 0;
+							[
+								name = GetValue( names; i );
+								filtered_names = List(
+									Case( Left( name; 1 ) = "_"; name );
+									filtered_names
+								);
+								i = i-1
+							];
+							filtered_names
+						)
+					];
+			
+					// change values of filtered_names
+					While(
+						[
+							params = params;
+							i = ValueCount( filtered_names )
+						];
+						i > 0;
+						[
+							name = GetValue( filtered_names; i );
+							params = JSONSetElement( params; name; "*****"; JSONString );
+							i = i-1
+						];
+						params
+					)
+				);
+
+				// else as is
+				params
+			)
+		);
+					
+					
+					
+		/*	to string
+			------------------------------------------------------------------------------
+			@about generate text form of exception object
+			@since 12.10.2021 – NW: change object to {"SError": ... }
+			@since 28.10.2021 – NW: moved from throw() to catch()
+		
+			@todo custom
+		*/
+		_code = "--to-string";
+		Let(
+			[
+				names = "class¶code¶message¶window¶table¶timestamp¶utc¶stack"
+					& "¶account¶accountPrivileges¶layout¶layoutPrivileges¶scriptPrivileges";
+				namecount = ValueCount( names );
+				custom = While(
+					[
+						custom = JSONGetElement( $SError; "SError" );
+						i=1
+					];
+					i <= namecount;
+					[
+						custom = JSONDeleteElement( custom; GetValue( names; i ));
+						i = i+1
+					];
+					custom
+				);
+				
+				stack = While(
+					[
+						count = ValueCount( JSONListKeys( $SError; "SError.stack" ));
+						stack = "";
+						i = 0
+					];
+					i < count;
+					[
+						// append to stack
+						item = JSONGetElement( $SError; "SError.stack[" & i & "]" );
+				
+						// number, file, script
+						text = "¶#" & i & " " 
+							& JSONGetElement( item; "file" ) 
+							& Case( JSONGetElement( item; "server" ); " (Server)" )
+							& ": "
+							& JSONGetElement( item; "script" )
+							& " [ID" & JSONGetElement( item; "scriptId" ) & "]";
+				
+						// parameters
+						parameter = JSONGetElement( item; "parameter" );
+						parameters_are_json = Left( JSONListKeys( parameter; "" ); 1 ) <> "?";
+						parameter = "Parameter: " & Case(
+							parameters_are_json;
+							JSONFormatElements( SError.catch_v7( "--filter-parameter" & parameter ))
+						);
+					
+						device = "Device: " & JSONGetElement( item; "device" );
+
+						// add to stack
+						stack = List( stack; text; parameter; device );
+					
+						i=i+1
+					];
+					stack
+				
+				); // end stack = ...
+				x=1
+			];
+			List(
+				"Class: " & JSONGetElement( $SError; "SError.class" );
+				"Code: " & JSONGetElement( $SError; "SError.code" );
+				"Message: " & JSONGetElement( $SError; "SError.message" );
+				"Account: " & JSONGetElement( $SError; "SError.account" );
+				"AccountPrivileges: " & JSONGetElement( $SError; "SError.accountPrivileges" );
+				"Layout: " & JSONGetElement( $SError; "SError.layout" );
+				"LayoutPrivileges: " & JSONGetElement( $SError; "SError.layoutPrivileges" );
+				"ScriptPrivileges: " & JSONGetElement( $SError; "SError.scriptPrivileges" );
+				"Timestamp: " & JSONGetElement( $SError; "SError.timestamp" );
+				Case( Length( custom )>2; "Custom: " & custom );
+				"¶Call Stack:";
+				stack
+			)
+		);
+
+
+		// Error
+		"ERROR: parameter _code = '" & _code & "' could not be resolved"
+		
+	// end commands
+	);
+
+					
+	
+					
+
+	/*	main
 	    ----------------------------------------------------------------------------------
 	*/
-	ZeichenLinks( result; 10 ) = "{\"SError\":" oder ZeichenLinks( $test_script_result; 10 ) = "{\"SError\":";
 	Let(
 		[
-			// append surrent script to stack array
-			size = ElementeAnzahl( Jsonlistkeys( result; "stack" ));
-			result = Falls( istleer( $test_script_result ); Hole( ScriptParameter ); $test_script_result );
-			$SError.json = Jsonsetelement( 
-				result; 
-				"stack[" & size & "]"; 
-				SError.throw( "--get-env"; ""; "" );	
-				jsonobject 
+			result = Case(
+				not IsEmpty( $test_script_result ); $test_script_result;
+				Get( ScriptResult )
 			);
 			
-			// set local var for debugging in data viewer
-			$SError.string = SError.throw( "--to-string"; $SError.json; "" );
-			r = SError.throw( "--set-vars"; exception; "" )
+			fmerror_code = Case(
+				not IsEmpty( $test_fmerror_code ); $test_fmerror_code;
+				Get( LastError )
+			)
 		];
-		wahr
-	);
-		 
+		
+		Case(
+		
+			/*	result is exception object
+				--------------------------------------------------------------------------
+			*/
+			Left( result; 11 ) = "{\"SError\":{";
+			Let(
+				[
+					// set $SError
+//					$SError.json = jsongetelement( result; "SError" );
+					
+					// set code
+					code = JSONGetElement( result; "SError.code" )
+				];
+				Case(
 
-	/*	FileMaker error
-	    ----------------------------------------------------------------------------------
-	*/
-	Hole(LetzteFehlerNr);
-	SError.throw( ""; ""; "" );
+					// filtering for code
+					IsEmpty( _code ) or _code = code;
+					
+					// process exception
+					Let(
+						[
+							// append current script to stack array
+							stack_size = ValueCount( JSONListKeys( result; "SError.stack" ));
+							$SError = JSONSetElement( 
+								result; 
+								"SError.stack[" & stack_size & "]"; 
+								SError.catch_v7( "--get-env" );	
+								JSONObject 
+							);
+							
+							// set local var for debugging in data viewer
+							$SError.string = SError.catch_v7( "--to-string" );
+
+							// set local var for return()
+							$SFmScript.result = $SError
+		
+						];
+						True
+					)
+				)
+			);
+	 
+
+			/*	catch FileMaker error
+				--------------------------------------------------------------------------
+			*/
+			fmerror_code;
+			Let(
+				[
+					$SError = SError.catch_v7( "--generate" );
+					$SError.string = SError.catch_v7( "--to-string" );
+					$SFmScript.result = $SError
+				];
+				True
+			)
+		)
+	)
 )
-
