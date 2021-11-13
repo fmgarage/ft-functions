@@ -1,4 +1,6 @@
-# FT Functions – Custom Functions for FileMaker®
+<span style="background-color:#ffffff;"><img src="docs/assets/images/logo.png" style="height:80px;magin-bottom: 20px;"></span>
 
-Custom Function that we use in our F1 Framework
+
+
+#### Custom Functions for FileMaker
 
