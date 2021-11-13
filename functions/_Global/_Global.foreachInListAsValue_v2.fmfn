@@ -1,0 +1,67 @@
+/*	_Global.foreachInListAsValue( _list, _name )
+	@about short form to use in ExitLoopIf 
+	@author Nils Waldherr <nils.waldherr@fmgarage.com>
+	@copyright ©2017-2021 FMGARAGE.com
+	@version 1.0.0-100 - 11.01.2017 
+	         2.0.0-102 – 19.09.2019 – NW: _name, $value, reset value, renamed
+	         2.1.0-103 - 01.11.2019 – NW: $some uses $some_i instead of $isome, fix
+	         
+	@param list _list
+	       int _name = "" -- optional name, default is $value
+	@return bool
+	
+	@todo _level
+	
+*/
+Case(
+
+	/*	return version
+		----------------------------------------------------------------------------------
+	*/
+	_list = "--version" or $_Db.inVersionMode; 2001000;
+
+	
+
+	/*	preconditions
+		----------------------------------------------------------------------------------
+	*/
+	IsEmpty( _list ); True;
+
+
+
+	/*	simple
+		----------------------------------------------------------------------------------
+	*/
+	IsEmpty( _name );
+	Let(
+		[
+			$i = $i +1;
+			$value = GetValue( _list; $i )
+		];
+		Case(
+			$i > ValueCount( _list );
+			Let([$i = ""; $value = "" ]; True )
+		)
+	);
+
+
+
+	/*	named
+		----------------------------------------------------------------------------------
+	*/
+	Let(
+		[
+			iname = "$" & _name & "_i";
+			ivalue = Evaluate( iname )+1;
+			r = Evaluate( 
+				"Let([" & iname & "=" & ivalue & ";$" & _name & "= " 
+				& Quote( GetValue( _list; ivalue ))
+				& "];1)"
+			)
+		];
+		Case(
+			ivalue > ValueCount( _list );
+			Evaluate( "Let([" & iname & "=\"\";$" & _name & "=\"\"]; 1 )" )
+		)
+	)	
+)
