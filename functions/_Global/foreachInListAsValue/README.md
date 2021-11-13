@@ -10,7 +10,15 @@ Expression to control the **Exit Loop If** script step. You can pass a list of v
 
 #### _list
 
+Type: list (newline separated values)
+
+Examples: "one¶two¶three", "1¶2¶3"
+
 #### _name
+
+optional
+
+Type: string
 
 Must be a valid variable name: [About naming fields](https://help.claris.com/en/pro-help/content/naming-fields.html).
 
@@ -23,10 +31,9 @@ Must be a valid variable name: [About naming fields](https://help.claris.com/en/
 ### Example
 
 ```filemaker
-Set Variable [ $list ; Value: "one¶two¶three" ] 
 Loop
-	Exit Loop If [ _Global.foreachInListAsValue ( $list; "" ) ] 
-	Show Custom Dialog [ "$value = " ; $value ] 
+	Exit Loop If [ _Global.foreachInListAsValue ( "one¶two¶three"; "" ) ] 
+	Show Custom Dialog [ "foreach demo" ; "$value " & $i & " = " & $value ] 
 End Loop
 ```
 
