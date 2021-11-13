@@ -1,0 +1,1 @@
+## _Global.for( _i_max; _i_name )

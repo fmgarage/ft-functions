@@ -1,0 +1,50 @@
+/*	_Global.for( _i_max; _i_name )
+	@about iterates through list, returns true after last row
+	@author Nils Waldherr <nils.waldherr@fmgarage.com>
+	@copyright ©2020-2021 FMGARAGE.com
+	@version 1.0.0-100 - 09.01.2020 – NW: 
+	         
+	@param int _i_max
+	       string _i_name = 'i'
+	@return bool
+	
+*/
+Case(
+
+	/*	return version
+	 ----------------------------------------------------------------------------------
+	*/
+	_i_max = "--version" or $_Db.inVersionMode; 1000000;
+
+	
+
+	/*	simple
+	--------------------------------------------------------------------------------------
+	*/
+	IsEmpty( _i_name );
+	Let(
+		$i = $i +1;
+		Case(
+			$i > _i_max+0;
+			Let(
+				$i = "";
+				True 
+			)
+		)
+	);
+	
+	/*	named
+	--------------------------------------------------------------------------------------
+	*/
+	Let(
+		[
+			iname = "$" & _i_name;
+			ivalue = Evaluate( iname )+1;
+			r = Evaluate( "Let(" & iname & "=" & ivalue & ";1)" )
+		];
+		Case(
+			ivalue > _i_max+0;
+			Evaluate( "Let(" & iname & "=\"\"; 1 )" )
+		)
+	)
+)
