@@ -1,0 +1,1 @@
+### _Global.foreachInListAsValue( _list, _name )
