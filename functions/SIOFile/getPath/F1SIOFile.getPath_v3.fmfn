@@ -1,0 +1,332 @@
+/*	F1SIOFile.getPath_v3( _path; _format )
+	@about file path conversion tool
+	@author Nils <nils.waldherr@fmgarage.com>
+	@copyright ©2015-2021 FMGARAGE
+	@version 1.1.0-100 - 22.02.2015 - NW: added format "image"
+             1.2.0-100 - 15.09.2015 - AB: added format "be" (Base Elements plugin)
+             2.0.0-102 - 19.11.2015 - NW: keyword + subfolder
+             2.0.1-104 - 22.09.2016 - NW: fix win backslashes
+             3.0.0-108 - 17.03.2017 - NW: revision, no trailing slashes, ~, extensions
+             3.0.1-110 - 05.01.2018 - NW: get drive name by documents path for server
+             3.1.0-111 - 22.01.2018 - NW: preconditions
+             3.2.0-112 - 02.02.2018 - NW: filemac, filewin, imagemac, imagewin
+             3.3.0-113 - 25.03.2018 - NW: _path "home"/"~"
+             3.3.1-116 - 18.07.2018 - NW: fix for windows network paths, 'be' deprecated
+             3.3.2-117 - 13.11.2018 - NW: fix for windows \C:
+             3.3.3-118 - 17.11.2018 - NW: fix for windows network paths
+             3.3.4-120 - 04.02.2019 - NW: fix mac, version mode
+             3.4.0-122 - 24.09.2019 - NW: remove prefixes (imagemac, file ...), moved to F1SIOFile
+             3.5.0-123 - 02.10.2019 - NW: extensions
+             3.5.1-125 - 20.01.2020 - NW: fix special folder is network alias (for ETH)
+             3.6.0-125 - 05.03.2021 – NW: linux support
+             3.6.1-126 - 06.03.2021 – NW: fix double slashes
+             3.6.2-127 - 23.03.2021 – NW: fix extensions
+             3.6.3-128 - 29.04.2021 – NW: version mode
+             3.6.4-132 - 24.05.2021 – NW: revision, $test_*, 'file:' prefix
+             3.6.5-133 - 24.08.2021 – NW: version suffix
+             3.7.0-134 - 03.11.2021 – NW: addons folder
+             3.7.1-135 - 08.06.2022 - NW: fix _path = file 
+		      
+	@param string _path -- input path 
+		or keyword (tmp, desktop, file, documents, settings, application, extensions )
+		input in FileMaker format (/Macintosh HD/Users/..." must be prefixed with "file:"
+		
+	@param string _format -- target format
+		output as: os, mac, win, url, troi, file (filemac/filewin), image (imagemac/imagewin)
+		
+	@param (string) $test_platform -- mac, win(dows), lin(ux)
+		
+	@throws Error
+	@info Open Url
+		http://www.filemaker.com/help/13/fmp/en/html/scripts_ref2.37.69.html
+		
+	
+	@test getPath( "tmp"; "os" ) -> C:\Users\username\...\
+	      getPath( "tmp"; "os" ) -> /private/tmp/...
+	      getPath( "desktop"; "fm" ) -> filemac:/Macintosh HD/Users/...
+	      mac -> /private/
+	      FM mac -> filemac:/
+	      FM win -> filewin:/
+	      FM mac getPath("/Volumes/Server/file.jpg"; "file" ) -> filemac:/Server/
+	
+	@todo output for iOS
+	@todo verbotene zeichen austauschen: ":"
+	@todo angucken "Pfadfinder im Apfelland - Kein Herumirren mehr wegen unterschiedlicher Pfadformate" in FileMaker-Magazin 2015-02 p. 29
+	@todo extensions auf Server
+	@todo fmnet: für _format = "file"
+	@todo systempfad mit hole( SystemLaufwerk )
+	@fixme Fehler bei manuellem Pfad "/System/Library" wenn die Systemplatte "System" heißt
+	
+
+*/
+
+Case(
+
+	/*	return version
+		----------------------------------------------------------------------------------
+	*/
+	_path = "--version" or $_Db.inVersionMode; 3006004;
+
+
+
+	/*	preconditions
+		----------------------------------------------------------------------------------
+	*/
+	IsEmpty( _path ); "";
+	
+
+
+	/*	main
+		----------------------------------------------------------------------------------
+	*/
+	Let(
+		[
+			supported_formats = "os¶mac¶win¶url¶image¶file¶filemac¶filewin¶filelinux¶imagemac¶imagewin¶imagelinux¶fmnet";
+			prefixes = "file:¶filemac:¶filewin:¶filelinux:¶image:¶imagemac:¶imagewin:¶imagelinux:";
+			//supported_formats = prefixes & "¶os¶mac¶win¶url¶fmnet";
+			prefix = GetValue( Substitute( _path; ":"; ":¶" ); 1 );
+			prefix = FilterValues( prefix; prefixes );
+			supported_std_folders = "tmp¶desktop¶file¶documents¶settings¶application¶extensions¶home¶~¶addons";
+			format = Case( IsEmpty( _format ); "os"; _format );
+			format_r3 = Right( format; 3 );
+			format_4 = Left( format; 4 );
+
+			// target platform 1:mac 2:win 3:ios 4:webdirect 5:linux
+			platform = Case(
+				format_r3 = "mac"; 1; 
+				format_r3 = "win"; 2;
+				Right( format; 5 ) = "linux"; 5;
+				Abs( Get( SystemPlatform ))
+			)
+		];
+		
+		Case(
+
+			/*	preconditions
+				--------------------------------------------------------------------------
+			*/
+		
+			// on unknown _format throw Error
+			IsEmpty( FilterValues( format; supported_formats ));
+			"ERROR: unknown _format '" & format & "'. use: " & Substitute( supported_formats; ¶; ", " );
+			
+			// mac path with backslashes in input
+			platform = 1 and Position( _path; "\\"; 1; 1 );
+			"ERROR: _path cannot be converted into mac format";
+			
+	
+			Let(
+				[
+
+					/*	convert input to universal path_list
+						----------------------------------------------------------------------------------
+					*/
+					
+					// strip prefix: filewin:/C: -> /C:
+					_path = Case( 
+						// path starts with prefix
+						not IsEmpty( prefix );
+						Right( _path; Length( _path ) - Length( prefix ));
+						_path
+					);
+					
+					// detect windows network path
+ 					// @since 3.5.1-124 - 20.01.2020 - NW: moved
+
+
+					/*	resolve standard folder
+						-------------------------
+					*/
+					std_folder = GetValue( Substitute( _path; "/"; ¶ ); 1 );
+					is_std_folder = not IsEmpty( FilterValues( std_folder; supported_std_folders ));
+					$$is_std_folder = is_std_folder;
+					std_path = Case(
+						not is_std_folder; "";
+						std_folder = "tmp"; Get( TemporaryPath );
+						std_folder = "desktop"; Get( DesktopPath );
+						std_folder = "file"; Let(
+							p = GetValue( Substitute( Get( FilePath ); ":"; ¶ ); 2 );
+							Replace( p; Position( p; "/"; 1; PatternCount( p ; "/" ))+1; Length(p); "" )
+						);
+						std_folder = "documents"; Get( DocumentsPath );
+						std_folder = "settings"; Get( PreferencesPath );
+						std_folder = "application"; Get( FileMakerPath );
+						std_folder = "extensions"; Substitute( Get( DesktopPath ); "Desktop/"; "" )
+							& Case( 
+								platform = 1; 
+								"Library/Application Support/";
+								"AppData/Local/"
+							)
+							& "FileMaker/FileMaker Pro"
+							& Case( Position( Get ( ApplicationVersion ); "Advanced";1;1); " Advanced/"; "/" )
+							& Let(
+								v = Substitute( 
+									Get( ApplicationVersion ); [" ";¶]; [".";¶] );
+									GetValue( v; 2 ) & ".0" 
+								//	& HoleWert( v; 3 ) 
+									& "/Extensions/"
+							);
+							
+						// user home
+						std_folder = "~" or std_folder = "home"; Substitute( Get( DesktopPath ); "Desktop/"; "" );
+						
+						// addons
+						std_folder = "addons";  Substitute( Get( DesktopPath ); "Desktop/"; "" )
+							& Case( 
+								platform = 1; 
+								"Library/Application Support/";
+								"AppData/Local/"
+							)
+							& "FileMaker/Extensions/AddonModules"
+					);
+					$$std_path = "sp: " & std_path;
+
+
+
+
+
+
+					/*	construct universal path
+						-------------------------
+					*/
+					path = Case(
+						// standard folder
+						is_std_folder;
+						std_path & Right( _path; Length( _path ) - Length( std_folder ) -1 );
+
+						// individual folder
+						_path
+					);
+					
+					// detect windows network path
+					is_win_network = ( platform = 2 and ( Left( path; 2 ) = "\\" & "\\" or Left( path; 2 ) = "//" ));
+
+					
+					// explode path into list, remove trailing '/'
+					path_list = Substitute( 
+						path & "::::"; 
+						["/"; ¶]; 
+						["\\";¶]; 
+						["¶::::"; ""]; 
+						["::::"; ""]
+					);
+					
+
+					
+
+
+					/*	mac system volume
+						-------------------------
+						on mac 
+					*/
+
+					// get system volumne on mac ('Macintosh HD')
+					mac_system_volume = Case( 
+						// not mac
+						platform ≠ 1; "";
+						// test 
+						not IsEmpty( $test_system_volume ); $test_system_volume;
+						// system volume
+						Left( Get( SystemDrive ); Length(Get( SystemDrive ))-1 )
+					);
+					
+					// path starts with mac system volume
+					path_has_system_volume = not IsEmpty( mac_system_volume ) 
+						and ( not IsEmpty( prefix ) or is_std_folder )
+						and Left( path; Length( mac_system_volume )+1) = mac_system_volume & "/"
+
+				];
+
+
+				/*	build the path from path_list
+					----------------------------------------------------------------------
+				*/
+				Case(
+
+
+					/*	file*, image*, fmnet
+						output as filemaker path for export, import, ...
+					*/
+					format_4 = "file" or format_4 = "imag" or format = "fmnet";
+					Case(
+					
+						// preconditions
+						False; // std_folder = "file";
+						"ERROR: FileMaker Server path cannot be used with format '" & format & "'";
+						
+						// prefix
+						Case(
+							format_4 = "file";
+							Choose( platform -1; "filemac:"; "filewin:"; ""; ""; "filelinux:" );
+							format_4 = "imag";
+							Choose( platform -1; "imagemac:"; "imagewin:"; ""; ""; "imagelinux:" );
+							"fmnet:"
+						)
+			
+						// add mac system volume
+						& Case( not IsEmpty( mac_system_volume )
+							and not path_has_system_volume 
+							and Left( _path; 8 ) ≠ "/Volumes"
+							and format ≠ "fmnet";
+							mac_system_volume
+						)
+					
+						// add leading '/' on windows
+						& Case( platform = 2 and Left( path_list; 1 ) <> ¶; "/" )
+
+						// pathlist
+						& Substitute(
+							path_list;
+							["¶¶"; "¶"];
+							["¶"; "/"];
+							["/Volumes";""]
+						)
+					);
+
+
+
+					/*	os/mac/win 
+						-----------------------------------
+						output as system path for mac/win
+					 	@todo ios
+					*/
+					Let(
+						p = Substitute(
+
+							// protocol
+							Case( format = "url"; "file://" )
+						
+							// mac path starts with '/'
+							& Case( platform = 1; ¶ )
+
+							// /tmp -> /private/tmp
+							& Case( std_folder = "tmp" and platform = 1; "private¶" )
+							
+							// add 'Volumes/' for non-system (boo) volume
+							& Case( 
+								platform = 1 and not IsEmpty( prefix ) and not path_has_system_volume;
+								"Volumes¶"
+							)
+							
+							// remove first element(s)
+							& RightValues( 
+								path_list; 
+								ValueCount( path_list ) - Case(
+									// remove system volume on mac
+									path_has_system_volume; 2;
+									// remove system volume on mac
+									platform = 1 ; 1;
+									// remove first '\' on win local
+									platform = 2 and not is_win_network and IsEmpty( GetValue( path_list; 1 )); 1
+								)
+							);
+							[ ¶; Case( platform = 2 and format ≠ "url"; "\\"; "/" )]
+						);
+						// remove trailing /
+						Left( p; Length( p )-1)
+					)
+				)
+			)
+		)
+	)
+)
