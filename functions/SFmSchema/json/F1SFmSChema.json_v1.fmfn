@@ -1,4 +1,4 @@
-/*	F1SFmDatabase.schemaJson( _tables; _options )
+/*	F1SFmSchema.json( _tables; _options )
 	@about output detailled schema info as json
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2023 FMGARAGE.com
@@ -28,7 +28,7 @@ Case(
 	*/
 	Case(
 		// write cache
-		IsEmpty( $$SFmSchema.json ) or Position( _options; "nocache"; 1; 1 );
+		IsEmpty( $$F1SFmSchema.json ) or Position( _options; "nocache"; 1; 1 );
 		Let(
 			[
 				// settings
@@ -234,15 +234,15 @@ Case(
 					];
 					json
 				);
-				$$SFmSchema.json = json
+				$$F1SFmSchema.json = json
 			];
 			""
 		)
 	)
 	& Case( 
-		Position( _options; "format"; 1; 1 ) and not IsEmpty( $$SFmSchema.json );
-		JSONFormatElements( $$SFmSchema.json );
-		$$SFmSchema.json
+		Position( _options; "format"; 1; 1 ) and not IsEmpty( $$F1SFmSchema.json );
+		JSONFormatElements( $$F1SFmSchema.json );
+		$$F1SFmSchema.json
 	)
 )
 
