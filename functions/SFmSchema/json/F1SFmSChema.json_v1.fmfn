@@ -1,4 +1,4 @@
-/*	SFmDatabase.schemaJson( _tables; _options )
+/*	F1SFmDatabase.schemaJson( _tables; _options )
 	@about output detailled schema info as json
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2023 FMGARAGE.com
@@ -240,7 +240,7 @@ Case(
 		)
 	)
 	& Case( 
-		Position( _options; "format"; 1; 1 );
+		Position( _options; "format"; 1; 1 ) and not IsEmpty( $$SFmSchema.json );
 		JSONFormatElements( $$SFmSchema.json );
 		$$SFmSchema.json
 	)
