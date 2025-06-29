@@ -15,9 +15,6 @@ Keywords: You can use keywords as alias for tmp, desktop, file, documents, setti
 Examples:
 
 - "desktop/test/export.txt" will output "/Users/yourname/Desktop/test/export.txt" on a Mac
-- 
-
-
 
 ### _format
 
@@ -33,7 +30,7 @@ Returns the path in the specified format or an error message ("ERROR: …")
 
 ## Version History
 
-| Version   | Date       | Author | Notes              |
-| --------- | ---------- | ------ | ------------------ |
-| 1.1.0-100 | 2015-02-22 | NW     | add format "image" |
+| Version | Date       | Author | Notes              |
+| ------- | ---------- | ------ | ------------------ |
+| 1.1.0   | 2015-02-22 | NW     | add format "image" |
 

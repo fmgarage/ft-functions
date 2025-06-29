@@ -1,16 +1,16 @@
-## SFmSchema.json() Custom Function
+# SFmSchema.json() Custom Function
 
 This Custom Function returns available information on the schema of the file by integrating the data from sources like the internal FileMaker_Tables and FileMaker_Fields tables and the functions FieldType(), FieldComment() and NextSerialValue().
 
-You can filter tables and fields for instance to get only the standard fields where information is stored originally.
+You can filter tables and fields to get only the standard fields where information is primarily stored. 
 
 
 
-### Parameters
+## Parameters
 
 
 
-#### _tables
+### _tables
 
 This can be used to filter tables in the current file. You can use list of table names and even wildcards. 
 
@@ -18,7 +18,7 @@ Example: providing "Global¶C*" returns the table 'Global' along with all other 
 
 
 
-#### _options
+### _options
 
 You can provide one or more keywords to specify the output:
 
@@ -32,7 +32,7 @@ You can provide one or more keywords to specify the output:
 
 
 
-### Result
+## Result
 
 The result is a json object with the table names as keys. Every table then is an object with can have the following keys:
 
@@ -47,3 +47,11 @@ The result is a json object with the table names as keys. Every table then is an
 - comment: comment from field definitions, null values are omitted.
 - debugFromFunction: result from FieldType()) function.
 - debugFromSql: row from internal FileMaker_Fields table
+
+
+
+## Demo
+
+The demo file uses the "Contacts" starter solution.
+
+![screenshot](screenshot.png)
