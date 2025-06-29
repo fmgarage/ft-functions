@@ -33,4 +33,7 @@ Returns the path in the specified format or an error message ("ERROR: …")
 
 ## Version History
 
-| Version | Date | Author | Notes |
+| Version   | Date       | Author | Notes              |
+| --------- | ---------- | ------ | ------------------ |
+| 1.1.0-100 | 2015-02-22 | NW     | add format "image" |
+
