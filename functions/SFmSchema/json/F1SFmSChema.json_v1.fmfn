@@ -184,22 +184,26 @@ Case(
 												IsEmpty( comment ); json; 
 												JSONSetElement( json; path & "comment"; comment; JSONString )
 											);
+
 											// repCount
 											rep_count = GetValue( sql_field; 6 );
 											json = Case(
 												rep_count = 1; json;
 												JSONSetElement( json; path & "repCount"; rep_count; JSONNumber )
 											);
+
 											// hasIndex
 											json = Case(
 												GetValue( get_field; 3 ) <> "Indexed"; json;
 												JSONSetElement( json; path & "hasIndex"; 1; JSONBoolean )
 											);
+
 											// isStored
 											json = Case(
 												type_fm_pre <> "StoredCalc"; json;
 												JSONSetElement( json; path & "isStored"; 1; JSONBoolean )
 											);
+
 											// nextValue
 											next_value = Case( 
 												Position( _options; "nextvalue"; 1; 1 ) and type_fm = "standard"; 
@@ -209,6 +213,7 @@ Case(
 												next_value < 1; json;
 												JSONSetElement( json; path & "nextValue"; next_value; JSONNumber )
 											);
+											
 											// debug
 											json = Case(
 												not Position( _options; "debug"; 1; 1 ); json;
