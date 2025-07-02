@@ -3,7 +3,7 @@
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2023 FMGARAGE.com
 	@version 1.0.0-100 - 24.10.2023
-	         1.0.1-101 - 02.07.2025 - NW: fix Get( FileName ), dynamic caching
+	         1.0.1-102 - 02.07.2025 - NW: fix Get( FileName ), dynamic caching
 	          
 	@param list _tables = "" -- filter table names, use * as wildcard
 	@param list _options = "" -- format, standard, stored, debug, comments, nextvalue
