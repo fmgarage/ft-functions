@@ -3,10 +3,10 @@
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2023 FMGARAGE.com
 	@version 1.0.0-100 - 24.10.2023
-	         1.0.1-101 - 02.07.2025 - NW: fix Get( FileName ) 
+	         1.0.1-101 - 02.07.2025 - NW: fix Get( FileName ), dynamic caching
 	          
 	@param list _tables = "" -- filter table names, use * as wildcard
-	@param list _options = "" -- format, standard, stored, debug, nocache, comments, nextvalue
+	@param list _options = "" -- format, standard, stored, debug, comments, nextvalue
 	@return json 
 */
 Case(
@@ -14,261 +14,260 @@ Case(
 	/*	return version
 		----------------------------------------------------------------------------------
 	*/
-	_tables = "--version" or $_Db.inVersionMode; 1000000;
-
-
-	/*	preconditions
-		----------------------------------------------------------------------------------
-	*/
-
-	// empty _param
-	//IstLeer( _param ); "ERROR: parameter _param must not be empty";
+	_tables = "--version" or $_Db.inVersionMode; 1000001;
 
 
 	/*	main
 		----------------------------------------------------------------------------------
 	*/
-	Case(
-		// write cache
-		IsEmpty( $$F1_SFmSchema.json ) or Position( _options; "nocache"; 1; 1 );
-		Let(
-			[
-				// settings
-				column_separator = "<<,>>";
-				file_name = Substitute ( Get( FilePath ); "/"; ¶ );
-				file_name = GetValue ( file_name; ValueCount ( file_name ) );
-				
-				// filter tables by name using wildcard 
-				_tables = Lower( _tables );
-				_tables_count = ValueCount( _tables );
-				tables_filter_uses_wildcards = Position( _tables; "*"; 1; 1 );
-				tables_filter_wildcards = Case( 
-					tables_filter_uses_wildcards;
-					While(
-						[
-							tables = "";
-							i = 1
-						];
-						i <= _tables_count;
-						[
-							table = GetValue( _tables; i );
-							tables = List( 
-								tables; 
-								Case( Position( table; "*"; 1; 1 ); Substitute( table; "*"; "%" ))
-							);
-							i=i+1
-						];
-						tables
-					)
-				);
-
-				// filter tables by exact name
-				tables_filter = Case(
-					// filter-out wildcards
-					not IsEmpty( _tables ) and tables_filter_uses_wildcards;
-					While(
-						[
-							tables = "";
-							i = 1
-						];
-						i <= _tables_count;
-						[
-							table = GetValue( _tables; i );
-							tables = List( 
-								tables; 
-								Case( not Position( table; "*"; 1; 1 ); table )
-							);
-							i=i+1
-						];
-						tables
-					);
-					_tables
-				);
-				table_filter = Substitute( 
-					List(
-						// tables_filter
-						Case( 
-							not IsEmpty( tables_filter ); 
-							" lower(TableName) in ('" 
-							& Substitute( tables_filter; ¶; "', '" )
-							& "') "
-						);
-						Case( 
-							not IsEmpty( tables_filter_wildcards );
-							" lower(TableName) like '"
-							& Substitute( tables_filter_wildcards; ¶; "' OR lower(TableName) like '" )
-							& "' "
+	Let(
+		// create hash of parameters for cache invalidation
+		cache_id = HexEncode ( CryptDigest ( _tables & _options; "md5" ));
+		Case(
+			// write cache
+			IsEmpty( $$F1_SFmSchema.json ) OR JSONGetElement( $$F1_SFmSchema.json; "cache_id" ) <> cache_id;
+			Let(
+				[
+					// settings
+					column_separator = "<<,>>";
+					file_name = Substitute ( Get( FilePath ); "/"; ¶ );
+					file_name = GetValue ( file_name; ValueCount ( file_name ) );
+					
+					// filter tables by name using wildcard 
+					_tables = Lower( _tables );
+					_tables_count = ValueCount( _tables );
+					tables_filter_uses_wildcards = Position( _tables; "*"; 1; 1 );
+					tables_filter_wildcards = Case( 
+						tables_filter_uses_wildcards;
+						While(
+							[
+								tables = "";
+								i = 1
+							];
+							i <= _tables_count;
+							[
+								table = GetValue( _tables; i );
+								tables = List( 
+									tables; 
+									Case( Position( table; "*"; 1; 1 ); Substitute( table; "*"; "%" ))
+								);
+								i=i+1
+							];
+							tables
 						)
 					);
-					"¶";
-					" OR "
-				);
 
-				// get tables
-				sql = "select * from FileMaker_Tables where lower(TableName) = lower(BaseTableName) "
-					& Case( not IsEmpty( table_filter ); " AND ( " & table_filter & " ) " );
-				tables = ExecuteSQL( sql; column_separator; ""; Get( FileName ); Get( FileName ) & " (%" );
-
-
-				// compose fields sql
-
-				stored_only = Position( _options; "stored"; 1; 1);
-
-				sql = "select * from FileMaker_Fields where TableName = ? "
-					& Case( 
-						// standard_only
-						Position( _options; "standard"; 1; 1); 
-						" and FieldClass = 'Normal' and FieldType not like 'global %'";
-
-						// stored only
-						stored_only; 
-						" and FieldClass IN ( 'Normal', 'Calculated' ) and FieldType not like 'global %'";
+					// filter tables by exact name
+					tables_filter = Case(
+						// filter-out wildcards
+						not IsEmpty( _tables ) and tables_filter_uses_wildcards;
+						While(
+							[
+								tables = "";
+								i = 1
+							];
+							i <= _tables_count;
+							[
+								table = GetValue( _tables; i );
+								tables = List( 
+									tables; 
+									Case( not Position( table; "*"; 1; 1 ); table )
+								);
+								i=i+1
+							];
+							tables
+						);
+						_tables
+					);
+					table_filter = Substitute( 
+						List(
+							// tables_filter
+							Case( 
+								not IsEmpty( tables_filter ); 
+								" lower(TableName) in ('" 
+								& Substitute( tables_filter; ¶; "', '" )
+								& "') "
+							);
+							Case( 
+								not IsEmpty( tables_filter_wildcards );
+								" lower(TableName) like '"
+								& Substitute( tables_filter_wildcards; ¶; "' OR lower(TableName) like '" )
+								& "' "
+							)
+						);
+						"¶";
+						" OR "
 					);
 
+					// get tables
+					sql = "select * from FileMaker_Tables where lower(TableName) = lower(BaseTableName) "
+						& Case( not IsEmpty( table_filter ); " AND ( " & table_filter & " ) " );
+					tables = ExecuteSQL( sql; column_separator; ""; Get( FileName ); Get( FileName ) & " (%" );
 
-				// foreach tables as table
-				json = While(
-					[	
-						json = "";
-						len = ValueCount( tables );
-						i = 1
-					];
-					i <= len;
-					[
-						list = Substitute( GetValue( tables; i ); column_separator; "¶" );
-						table = GetValue( list; 1 );
-						record_count = ExecuteSQL( "select count(*) from \"" & table & "\""; ""; "" );
-						tos = While(
-							[
-								sql = "select TableName from FileMaker_Tables where BaseTableName = ? and BaseFileName = ? order by Lower( TableName )";
-								names = ExecuteSQL ( sql; ""; ""; table; Get ( FileName ));
-								count = ValueCount( names );
-								tos = "[]";
-								i = 0
-							];
-							i < count;
-							[
-								tos = JSONSetElement( tos; i; GetValue( names; i+1 ); JSONString );
-								i = i+1
-							];
-							tos
+
+					// compose fields sql
+
+					stored_only = Position( _options; "stored"; 1; 1);
+
+					sql = "select * from FileMaker_Fields where TableName = ? "
+						& Case( 
+							// standard_only
+							Position( _options; "standard"; 1; 1); 
+							" and FieldClass = 'Normal' and FieldType not like 'global %'";
+
+							// stored only
+							stored_only; 
+							" and FieldClass IN ( 'Normal', 'Calculated' ) and FieldType not like 'global %'";
 						);
-						json = JSONSetElement( json; 
-							[ table & ".id"; GetValue( list; 2 ); JSONNumber ];
-							[ table & ".modCount"; GetValue( list; 5 ); JSONNumber ];
-							[ table & ".tos"; tos; JSONArray ];
-							[ table & ".recordCount"; record_count; JSONNumber ]
-						);
-						
-						// get fields for table
-						fields = ExecuteSQL( sql; column_separator; ""; table );
-						json = While(
-							[
-								json = json;
-								i = 1;
-								len = ValueCount( fields )
-							];
-							i <= len;
-							[
-								sql_field = Substitute( GetValue( fields; i ); column_separator; ¶ );
-								field = GetValue( sql_field; 2 );
-								get_field = Substitute( FieldType( file_name; table & "::" & field ); " "; ¶ );
-								type_fm_pre = Lower( GetValue( get_field; 1 ));
 
-								json = Case(
 
-									// exclude
-									type_fm_pre = "UnstoredCalc" and stored_only; json;
+					// foreach tables as table
+					json = While(
+						[	
+							json = JSONSetElement( ""; "cache_id"; cache_id; JSONString );
+							len = ValueCount( tables );
+							i = 1
+						];
+						i <= len;
+						[
+							list = Substitute( GetValue( tables; i ); column_separator; "¶" );
+							table = GetValue( list; 1 );
+							record_count = ExecuteSQL( "select count(*) from \"" & table & "\""; ""; "" );
+							tos = While(
+								[
+									sql = "select TableName from FileMaker_Tables where BaseTableName = ? and BaseFileName = ? order by Lower( TableName )";
+									names = ExecuteSQL ( sql; ""; ""; table; Get ( FileName ));
+									count = ValueCount( names );
+									tos = "[]";
+									i = 0
+								];
+								i < count;
+								[
+									tos = JSONSetElement( tos; i; GetValue( names; i+1 ); JSONString );
+									i = i+1
+								];
+								tos
+							);
+							json = JSONSetElement( json; 
+								[ table & ".id"; GetValue( list; 2 ); JSONNumber ];
+								[ table & ".modCount"; GetValue( list; 5 ); JSONNumber ];
+								[ table & ".tos"; tos; JSONArray ];
+								[ table & ".recordCount"; record_count; JSONNumber ]
+							);
+							
+							// get fields for table
+							fields = ExecuteSQL( sql; column_separator; ""; table );
+							json = While(
+								[
+									json = json;
+									i = 1;
+									len = ValueCount( fields )
+								];
+								i <= len;
+								[
+									sql_field = Substitute( GetValue( fields; i ); column_separator; ¶ );
+									field = GetValue( sql_field; 2 );
+									get_field = Substitute( FieldType( file_name; table & "::" & field ); " "; ¶ );
+									type_fm_pre = Lower( GetValue( get_field; 1 ));
 
-									// include
-									Let(
-										[
-											type_fm = Case( type_fm_pre = "UnstoredCalc" or type_fm_pre = "StoredCalc"; "calculation"; type_fm_pre );
-											type_data = Lower ( GetValue( get_field; 2 ));
-											path = table & ".fields." & field & ".";
-											json = JSONSetElement ( json; 
-												[path & "fmType"; type_fm; JSONString];
-												[path & "dataType"; type_data; JSONString];
-												[path & "id"; GetValue( sql_field; 4 ); JSONNumber]; 
-												[path & "modCount"; GetValue( sql_field; 7 ); JSONNumber]
-											);
-											// optional values
+									json = Case(
 
-											// comment
-											comment = Case( 
-												Position( _options; "comments"; 1; 1 ); 
-												FieldComment( file_name; table & "::" & field )
-											);
-											json = Case(
-												IsEmpty( comment ); json; 
-												JSONSetElement( json; path & "comment"; comment; JSONString )
-											);
+										// exclude
+										type_fm_pre = "UnstoredCalc" and stored_only; json;
 
-											// repCount
-											rep_count = GetValue( sql_field; 6 );
-											json = Case(
-												rep_count = 1; json;
-												JSONSetElement( json; path & "repCount"; rep_count; JSONNumber )
-											);
+										// include
+										Let(
+											[
+												type_fm = Case( type_fm_pre = "UnstoredCalc" or type_fm_pre = "StoredCalc"; "calculation"; type_fm_pre );
+												type_data = Lower ( GetValue( get_field; 2 ));
+												path = table & ".fields." & field & ".";
+												json = JSONSetElement ( json; 
+													[path & "fmType"; type_fm; JSONString];
+													[path & "dataType"; type_data; JSONString];
+													[path & "id"; GetValue( sql_field; 4 ); JSONNumber]; 
+													[path & "modCount"; GetValue( sql_field; 7 ); JSONNumber]
+												);
+												// optional values
 
-											// hasIndex
-											json = Case(
-												GetValue( get_field; 3 ) <> "Indexed"; json;
-												JSONSetElement( json; path & "hasIndex"; 1; JSONBoolean )
-											);
+												// comment
+												comment = Case( 
+													Position( _options; "comments"; 1; 1 ); 
+													FieldComment( file_name; table & "::" & field )
+												);
+												json = Case(
+													IsEmpty( comment ); json; 
+													JSONSetElement( json; path & "comment"; comment; JSONString )
+												);
 
-											// isStored
-											json = Case(
-												type_fm_pre <> "StoredCalc"; json;
-												JSONSetElement( json; path & "isStored"; 1; JSONBoolean )
-											);
+												// repCount
+												rep_count = GetValue( sql_field; 6 );
+												json = Case(
+													rep_count = 1; json;
+													JSONSetElement( json; path & "repCount"; rep_count; JSONNumber )
+												);
 
-											// nextValue
-											next_value = Case( 
-												Position( _options; "nextvalue"; 1; 1 ) and type_fm = "standard"; 
-												GetNextSerialValue ( file_name; table & "::" & field )
-											);
-											json = Case(
-												next_value < 1; json;
-												JSONSetElement( json; path & "nextValue"; next_value; JSONNumber )
-											);
-											
-											// debug
-											json = Case(
-												not Position( _options; "debug"; 1; 1 ); json;
-												JSONSetElement( json; 
-													[path & "debugFromFunction"; Substitute( get_field; ¶; " | "); JSONString];
-													[path & "debugFromSql"; Substitute( sql_field; ¶; " | "); JSONString]
+												// hasIndex
+												json = Case(
+													GetValue( get_field; 3 ) <> "Indexed"; json;
+													JSONSetElement( json; path & "hasIndex"; 1; JSONBoolean )
+												);
+
+												// isStored
+												json = Case(
+													type_fm_pre <> "StoredCalc"; json;
+													JSONSetElement( json; path & "isStored"; 1; JSONBoolean )
+												);
+
+												// nextValue
+												next_value = Case( 
+													Position( _options; "nextvalue"; 1; 1 ) and type_fm = "standard"; 
+													GetNextSerialValue ( file_name; table & "::" & field )
+												);
+												json = Case(
+													next_value < 1; json;
+													JSONSetElement( json; path & "nextValue"; next_value; JSONNumber )
+												);
+												
+												// debug
+												json = Case(
+													not Position( _options; "debug"; 1; 1 ); json;
+													JSONSetElement( json; 
+														[path & "debugFromFunction"; Substitute( get_field; ¶; " | "); JSONString];
+														[path & "debugFromSql"; Substitute( sql_field; ¶; " | "); JSONString]
+													)
 												)
-											)
-										];
-										json
-									)
-								);
+											];
+											json
+										)
+									);
 
-								// next
-								i = i+1
-							];
-							json
-						);
+									// next
+									i = i+1
+								];
+								json
+							);
 
-						
-						
-						i = i+1
-					];
-					json
-				);
-				$$F1_SFmSchema.json = json
-			];
-			""
+							
+							
+							i = i+1
+						];
+						json
+					);
+					$$F1_SFmSchema.json = json
+				];
+				""
+			)
 		)
-	)
-	& Case( 
-		// formatted output
-		Position( _options; "format"; 1; 1 ) and not IsEmpty( $$F1_SFmSchema.json );
-		JSONFormatElements( $$F1_SFmSchema.json );
+		& Case( 
+			// empty
+			IsEmpty( $$F1_SFmSchema.json ); "";
 
-		// unformatted 
-		$$F1_SFmSchema.json
+			// formatted output
+			Position( _options; "format"; 1; 1 );
+			JSONFormatElements( JSONDeleteElement ( $$F1_SFmSchema.json; "cache_id" ));
+
+			// unformatted 
+			JSONDeleteElement ( $$F1_SFmSchema.json; "cache_id" )
+		)
 	)
 )
