@@ -1,8 +1,10 @@
-/*	F1SFmSchema.json( _tables; _options )
+/*	F1_SFmSchema.json( _tables; _options )
 	@about output detailled schema info as json
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2023 FMGARAGE.com
-	@version 1.0.0-100 - 24.10.2023 - NW: 
+	@version 1.0.0-100 - 24.10.2023
+	         1.0.1-101 - 02.07.2025 - NW: fix Get( FileName ) 
+	          
 	@param list _tables = "" -- filter table names, use * as wildcard
 	@param list _options = "" -- format, standard, stored, debug, nocache, comments, nextvalue
 	@return json 
@@ -28,12 +30,13 @@ Case(
 	*/
 	Case(
 		// write cache
-		IsEmpty( $$F1SFmSchema.json ) or Position( _options; "nocache"; 1; 1 );
+		IsEmpty( $$F1_SFmSchema.json ) or Position( _options; "nocache"; 1; 1 );
 		Let(
 			[
 				// settings
 				column_separator = "<<,>>";
-				file = GetValue( Substitute( Get( FileName ); " ("; ¶ ); 1 );
+				file_name = Substitute ( Get( FilePath ); "/"; ¶ );
+				file_name = GetValue ( file_name; ValueCount ( file_name ) );
 				
 				// filter tables by name using wildcard 
 				_tables = Lower( _tables );
@@ -104,7 +107,7 @@ Case(
 				// get tables
 				sql = "select * from FileMaker_Tables where lower(TableName) = lower(BaseTableName) "
 					& Case( not IsEmpty( table_filter ); " AND ( " & table_filter & " ) " );
-				tables = ExecuteSQL( sql; column_separator; ""; file; file & " (%" );
+				tables = ExecuteSQL( sql; column_separator; ""; Get( FileName ); Get( FileName ) & " (%" );
 
 
 				// compose fields sql
@@ -123,7 +126,7 @@ Case(
 					);
 
 
-				// foreach in tables
+				// foreach tables as table
 				json = While(
 					[	
 						json = "";
@@ -135,9 +138,25 @@ Case(
 						list = Substitute( GetValue( tables; i ); column_separator; "¶" );
 						table = GetValue( list; 1 );
 						record_count = ExecuteSQL( "select count(*) from \"" & table & "\""; ""; "" );
+						tos = While(
+							[
+								sql = "select TableName from FileMaker_Tables where BaseTableName = ? and BaseFileName = ? order by Lower( TableName )";
+								names = ExecuteSQL ( sql; ""; ""; table; Get ( FileName ));
+								count = ValueCount( names );
+								tos = "[]";
+								i = 0
+							];
+							i < count;
+							[
+								tos = JSONSetElement( tos; i; GetValue( names; i+1 ); JSONString );
+								i = i+1
+							];
+							tos
+						);
 						json = JSONSetElement( json; 
 							[ table & ".id"; GetValue( list; 2 ); JSONNumber ];
 							[ table & ".modCount"; GetValue( list; 5 ); JSONNumber ];
+							[ table & ".tos"; tos; JSONArray ];
 							[ table & ".recordCount"; record_count; JSONNumber ]
 						);
 						
@@ -153,7 +172,7 @@ Case(
 							[
 								sql_field = Substitute( GetValue( fields; i ); column_separator; ¶ );
 								field = GetValue( sql_field; 2 );
-								get_field = Substitute( FieldType( Get( FileName ); table & "::" & field ); " "; ¶ );
+								get_field = Substitute( FieldType( file_name; table & "::" & field ); " "; ¶ );
 								type_fm_pre = Lower( GetValue( get_field; 1 ));
 
 								json = Case(
@@ -178,7 +197,7 @@ Case(
 											// comment
 											comment = Case( 
 												Position( _options; "comments"; 1; 1 ); 
-												FieldComment( Get( FileName ); table & "::" & field )
+												FieldComment( file_name; table & "::" & field )
 											);
 											json = Case(
 												IsEmpty( comment ); json; 
@@ -207,7 +226,7 @@ Case(
 											// nextValue
 											next_value = Case( 
 												Position( _options; "nextvalue"; 1; 1 ) and type_fm = "standard"; 
-												GetNextSerialValue ( file; table & "::" & field )
+												GetNextSerialValue ( file_name; table & "::" & field )
 											);
 											json = Case(
 												next_value < 1; json;
@@ -239,15 +258,17 @@ Case(
 					];
 					json
 				);
-				$$F1SFmSchema.json = json
+				$$F1_SFmSchema.json = json
 			];
 			""
 		)
 	)
 	& Case( 
-		Position( _options; "format"; 1; 1 ) and not IsEmpty( $$F1SFmSchema.json );
-		JSONFormatElements( $$F1SFmSchema.json );
-		$$F1SFmSchema.json
+		// formatted output
+		Position( _options; "format"; 1; 1 ) and not IsEmpty( $$F1_SFmSchema.json );
+		JSONFormatElements( $$F1_SFmSchema.json );
+
+		// unformatted 
+		$$F1_SFmSchema.json
 	)
 )
-

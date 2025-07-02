@@ -1,4 +1,4 @@
-# SFmSchema.json() Custom Function
+# F1_SFmSchema.json()
 
 This Custom Function returns available information on the schema of the file by integrating the data from sources like the internal FileMaker_Tables and FileMaker_Fields tables and the functions FieldType(), FieldComment() and NextSerialValue().
 
@@ -20,21 +20,21 @@ Example: providing "Global¶C*" returns the table 'Global' along with all other 
 
 ### _options
 
-You can provide one or more keywords to specify the output:
+You can provide one or more keywords to specify the output. You can separate the keywords by space (or any other character for that matter):
 
-- format: the json output will be formatted
-- debug: adds the original outputs from Get( FieldType ) and FileMaker_Fields
-- nocache: results are cached in global variable so subsequent calls are significantly faster. For developing or debugging you might want to disable this.
-- standard: only standard fields are being returned. Global fields, calculations and summary fields will be excluded from the result.
-- stored: like 'standard' but with additional stored calculations.
-- comments: includes the field comment from the field definitions.
-- nextvalue: includes the next value for auto-incrementing fields like numeric ids.
+- **format**: the json output will be formatted
+- **debug**: adds the original outputs from Get( FieldType ) and FileMaker_Fields
+- **nocache**: results are cached in global variable so subsequent calls are significantly faster. For developing or debugging you might want to disable this.
+- **standard**: only standard fields are being returned. Global fields, calculations and summary fields will be excluded from the result.
+- **stored**: like 'standard' but with additional stored calculations.
+- **comments**: includes the field comment from the field definitions.
+- **nextvalue**: includes the next value for auto-incrementing fields like numeric ids.
 
 
 
 ## Result
 
-The result is a json object with the table names as keys. Every table then is an object with can have the following keys:
+The result is a json object with the table names as keys. Every table then has an id, modCount, recordCount property, a *tos* array containing table occurrences and a *fields* object with fieldnames and the following keys:
 
 - fmType: can either be standard, global, calculation, summary
 - dataType: text, number, container, date, time, timestamp
@@ -45,7 +45,7 @@ The result is a json object with the table names as keys. Every table then is an
 - repCount: only for repeating fields
 - nextValue: optional result from NextSerialValue() function. 
 - comment: comment from field definitions, null values are omitted.
-- debugFromFunction: result from FieldType()) function.
+- debugFromFunction: result from the design functions.
 - debugFromSql: row from internal FileMaker_Fields table
 
 
