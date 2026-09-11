@@ -1,0 +1,22 @@
+site_name: ft-functions
+site_description: FileMaker Custom Functions by FMGarage
+site_url: https://fmgarage.github.io/ft-functions/
+repo_url: https://github.com/fmgarage/ft-functions
+edit_uri: edit/main/functions/
+
+docs_dir: functions
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - search.suggest
+    - content.code.copy
+
+markdown_extensions:
+  - tables
+  - fenced_code
+  - toc:
+      permalink: true

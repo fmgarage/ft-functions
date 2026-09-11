@@ -1,6 +1,7 @@
 .*
 *.fmp12
 !.gitignore
+!.github/
 Wiederherst.log
 *.webloc
-.vscode
+site/
