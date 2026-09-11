@@ -1,4 +1,4 @@
-/*	F1SIOFile.getPath_v3( _path; _format )
+/*	SIOFile.getPath_v3( _path; _format )
 	@about file path conversion tool
 	@author Nils <nils.waldherr@fmgarage.com>
 	@copyright ©2015-2021 FMGARAGE
@@ -15,7 +15,7 @@
              3.3.2-117 - 13.11.2018 - NW: fix for windows \C:
              3.3.3-118 - 17.11.2018 - NW: fix for windows network paths
              3.3.4-120 - 04.02.2019 - NW: fix mac, version mode
-             3.4.0-122 - 24.09.2019 - NW: remove prefixes (imagemac, file ...), moved to F1SIOFile
+             3.4.0-122 - 24.09.2019 - NW: remove prefixes (imagemac, file ...), moved to SIOFile
              3.5.0-123 - 02.10.2019 - NW: extensions
              3.5.1-125 - 20.01.2020 - NW: fix special folder is network alias (for ETH)
              3.6.0-125 - 05.03.2021 – NW: linux support
@@ -26,6 +26,7 @@
              3.6.5-133 - 24.08.2021 – NW: version suffix
              3.7.0-134 - 03.11.2021 – NW: addons folder
              3.7.1-135 - 08.06.2022 - NW: fix _path = file 
+             3.7.2-136 - 18.12.2023 – NW: fix system volume on mac ('/Macintosh HD')
 		      
 	@param string _path -- input path 
 		or keyword (tmp, desktop, file, documents, settings, application, extensions )
@@ -49,13 +50,13 @@
 	      FM win -> filewin:/
 	      FM mac getPath("/Volumes/Server/file.jpg"; "file" ) -> filemac:/Server/
 	
+	@fixme error for manual path "/System/Library" if system volume is named "System"
 	@todo output for iOS
-	@todo verbotene zeichen austauschen: ":"
-	@todo angucken "Pfadfinder im Apfelland - Kein Herumirren mehr wegen unterschiedlicher Pfadformate" in FileMaker-Magazin 2015-02 p. 29
-	@todo extensions auf Server
-	@todo fmnet: für _format = "file"
-	@todo systempfad mit hole( SystemLaufwerk )
-	@fixme Fehler bei manuellem Pfad "/System/Library" wenn die Systemplatte "System" heißt
+	@todo replace invalid chars: ":"
+	@todo read article "Pfadfinder im Apfelland - Kein Herumirren mehr wegen unterschiedlicher Pfadformate" in FileMaker-Magazin 2015-02 p. 29
+	@todo extensions on Server
+	@todo fmnet: for _format = "file"
+	@todo system path mit hole( SystemLaufwerk )
 	
 
 */
@@ -65,7 +66,7 @@ Case(
 	/*	return version
 		----------------------------------------------------------------------------------
 	*/
-	_path = "--version" or $_Db.inVersionMode; 3006004;
+	_path = "--version" or $_Db.inVersionMode; 3007002;
 
 
 
@@ -91,13 +92,15 @@ Case(
 			format_r3 = Right( format; 3 );
 			format_4 = Left( format; 4 );
 
-			// target platform 1:mac 2:win 3:ios 4:webdirect 5:linux
+			// target platform 1:mac 2:win 3:ios 4:webdirect 5:linux (centos) 8: linux (ubuntu)
 			platform = Case(
 				format_r3 = "mac"; 1; 
 				format_r3 = "win"; 2;
-				Right( format; 5 ) = "linux"; 5;
+				format_r3 = "nux"; 5;
 				Abs( Get( SystemPlatform ))
-			)
+			);
+			// correct ubuntu 8 to 5
+			platform = Case( platform = 8; 5; platform )
 		];
 		
 		Case(
@@ -115,8 +118,11 @@ Case(
 			"ERROR: _path cannot be converted into mac format";
 			
 	
-			Let(
+	
+
+			Let( 
 				[
+					$$DEBUG = "";
 
 					/*	convert input to universal path_list
 						----------------------------------------------------------------------------------
@@ -139,7 +145,7 @@ Case(
 					*/
 					std_folder = GetValue( Substitute( _path; "/"; ¶ ); 1 );
 					is_std_folder = not IsEmpty( FilterValues( std_folder; supported_std_folders ));
-					$$is_std_folder = is_std_folder;
+					$$DEBUG = List( $$DEBUG; "is_std_folder: " & is_std_folder );
 					std_path = Case(
 						not is_std_folder; "";
 						std_folder = "tmp"; Get( TemporaryPath );
@@ -179,11 +185,7 @@ Case(
 							)
 							& "FileMaker/Extensions/AddonModules"
 					);
-					$$std_path = "sp: " & std_path;
-
-
-
-
+					$$DEBUG = List( $$DEBUG; "std_path: " & std_path );
 
 
 					/*	construct universal path
@@ -220,7 +222,7 @@ Case(
 						on mac 
 					*/
 
-					// get system volumne on mac ('Macintosh HD')
+					// get system volume on mac ('Macintosh HD')
 					mac_system_volume = Case( 
 						// not mac
 						platform ≠ 1; "";
@@ -232,8 +234,14 @@ Case(
 					
 					// path starts with mac system volume
 					path_has_system_volume = not IsEmpty( mac_system_volume ) 
-						and ( not IsEmpty( prefix ) or is_std_folder )
-						and Left( path; Length( mac_system_volume )+1) = mac_system_volume & "/"
+						and ( not IsEmpty( prefix ) or is_std_folder or Left( _path; 1 ) = "/" )
+						and Left( path; Length( mac_system_volume )+1) = mac_system_volume & "/";
+
+					$$DEBUG = List( $$DEBUG; "prefix: " & prefix );
+					$$DEBUG = List( $$DEBUG; "mac_system_volume: " & mac_system_volume );
+					$$DEBUG = List( $$DEBUG; "path_has_system_volume: " & path_has_system_volume );
+
+					x=1
 
 				];
 
