@@ -1,4 +1,4 @@
-/*	SCoreJson.findKey( _json; _name; _scalar_only )
+/*	SCoreJson.findKey_v1( _json; _name; _scalar_only )
 	@about returns a list of paths to elements with key _name
 	@author Nils <nils.waldherr@fmgarage.com>
 	@copyright ©2021 FMGARAGE

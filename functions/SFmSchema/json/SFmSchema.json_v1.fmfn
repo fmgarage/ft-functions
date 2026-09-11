@@ -1,4 +1,4 @@
-/*	F1_SFmSchema.json( _tables; _options )
+/*	SFmSchema.json_v1( _tables; _options )
 	@about output detailled schema info as json
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2023 FMGARAGE.com

@@ -48,7 +48,7 @@ Case(
 	/*	return version
 	    ----------------------------------------------------------------------------------
 	*/
-	_plugin = "--version" or $_Db.inVersionMode; 6000003;
+	_plugin = "--version" or $_Db.inVersionMode; 6001000;
 
 
 

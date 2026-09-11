@@ -1,4 +1,4 @@
-/*	_Global.foreachInListAsValue( _list, _name )
+/*	_Global.foreachInListAsValue_v2( _list, _name )
 	@about short form to use in ExitLoopIf 
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2017-2021 FMGARAGE.com

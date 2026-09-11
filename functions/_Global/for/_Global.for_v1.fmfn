@@ -1,4 +1,4 @@
-/*	_Global.for( _i_max; _i_name )
+/*	_Global.for_v1( _i_max; _i_name )
 	@about iterates through list, returns true after last row
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2020-2021 FMGARAGE.com
