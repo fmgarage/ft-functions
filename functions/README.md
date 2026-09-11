@@ -1,6 +1,6 @@
-# Classes
+# Overview
 
-Custom Functions are grouped by classes.
+All Custom Functions are organized by namespaces. 
 
 
 
