@@ -3,3 +3,4 @@
 !.gitignore
 Wiederherst.log
 *.webloc
+.vscode
