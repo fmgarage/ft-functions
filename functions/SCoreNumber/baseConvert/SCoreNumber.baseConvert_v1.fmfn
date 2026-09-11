@@ -1,4 +1,4 @@
-/*	SCoreNumber.baseConvert_v1( _value; _from; _to )
+/*	SCoreNumber.baseConvert_v1( _value; _from; _to ) 
 	@about coverts between different bases, e.g. base10 (decimal) to base2 (binary)
 	@author Nils Waldherr <nils.waldherr@fmgarage.com>
 	@copyright ©2020 FMGARAGE
