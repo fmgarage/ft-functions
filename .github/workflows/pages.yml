@@ -28,6 +28,7 @@ jobs:
           python-version: "3.x"
       - run: pip install mkdocs-material
       - run: mkdocs build --strict
+      - run: python3 scripts/build_appcast.py --out site/functions.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
